@@ -1,122 +1,134 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React, { useEffect, useState } from 'react';
+import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [tgUser, setTgUser] = useState<{ firstName: string; id: number } | null>(null);
+  // Заменяем строку ошибки на статус загрузки
+  const [isLoading, setIsLoading] = useState(true);
+
+  const tenantConfig = {
+    tenant_id: "super_gym_01",
+    branding: {
+      company_name: "Super Gym Premium",
+      primary_color: "#FF5733" 
+    }
+  };
+
+  const isTelegramContext = 
+    window.location.href.includes('tgWebAppData') || 
+    window.location.href.includes('tgWebAppPlatform') ||
+    (window as any).Telegram?.WebApp?.initData !== undefined;
+
+  useEffect(() => {
+    if (!isTelegramContext) {
+      setIsLoading(false); // Если мы точно в браузере, прекращаем загрузку
+      return;
+    }
+
+    let attempts = 0;
+    
+    const checkUserData = () => {
+      attempts++;
+      
+      try {
+        const { initData } = retrieveLaunchParams();
+        if (initData && initData.user) {
+          setTgUser({ firstName: initData.user.firstName, id: initData.user.id });
+          setIsLoading(false);
+          return true;
+        }
+      } catch (e) {
+        // Логируем ошибку только для разработчика в консоль
+        console.warn("Ожидание инициализации SDK...");
+      }
+
+      const nativeUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+      if (nativeUser) {
+        setTgUser({
+          firstName: nativeUser.first_name,
+          id: nativeUser.id
+        });
+        setIsLoading(false);
+        return true;
+      }
+
+      if (attempts >= 10) {
+        console.error("Данные не появились в window.Telegram спустя 1 сек. Возможно, ngrok затер хэш URL.");
+        setIsLoading(false); // Прекращаем крутить лоадер
+      }
+      
+      return false;
+    };
+
+    const isFound = checkUserData();
+    
+    if (!isFound) {
+      const interval = setInterval(() => {
+        const found = checkUserData();
+        if (found) {
+          clearInterval(interval);
+        }
+      }, 100);
+
+      return () => clearInterval(interval);
+    }
+  }, [isTelegramContext]);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+    <div style={{ 
+      padding: '20px', 
+      fontFamily: 'sans-serif',
+      minHeight: '100vh',
+      backgroundColor: '#121212', 
+      color: '#ffffff',
+      textAlign: 'center'
+    }}>
+      <header style={{ marginBottom: '40px' }}>
+        <h1 style={{ fontSize: '26px', margin: '0' }}>
+          {tenantConfig.branding.company_name}
+        </h1>
+        <small style={{ color: '#666' }}>ID зала: {tenantConfig.tenant_id}</small>
+      </header>
+
+      <main style={{ marginTop: '50px' }}>
+        {/* СЦЕНАРИЙ 1: Идет загрузка/ожидание данных от Телеграма */}
+        {isLoading ? (
+          <p style={{ fontSize: '16px', color: '#aaa' }}>Загрузка профиля...</p>
+        ) : isTelegramContext && tgUser ? (
+          /* СЦЕНАРИЙ 2: Всё успешно определилось */
+          <p style={{ fontSize: '18px', color: '#aaa' }}>
+            Привет, <strong style={{ color: '#fff' }}>{tgUser.firstName}</strong>! <br />
+            (ID: {tgUser.id}) <br />
+            Готов к тренировке?
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+        ) : (
+          /* СЦЕНАРИЙ 3: Это обычный браузер (или критическая ошибка) */
+          <div style={{ backgroundColor: '#1e1e1e', padding: '16px', borderRadius: '12px', marginBottom: '20px' }}>
+            <p style={{ fontSize: '16px', color: '#ffb703', margin: '0' }}>
+              ⚠️ Работа приложения доступна только внутри Telegram.
+            </p>
+          </div>
+        )}
+
+        <button style={{
+          backgroundColor: tenantConfig.branding.primary_color, 
+          color: '#fff',
+          border: 'none',
+          padding: '16px 32px',
+          borderRadius: '12px',
+          fontSize: '16px',
+          fontWeight: 'bold',
+          width: '100%',
+          maxWidth: '280px',
+          marginTop: '20px',
+          cursor: 'pointer',
+          opacity: isLoading || (!tgUser && isTelegramContext) ? 0.6 : 1 // Блокируем, если не загрузилось
+        }} disabled={isLoading}>
+          НАЧАТЬ ТРЕНИРОВКУ
         </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
