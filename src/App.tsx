@@ -1,17 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
+import { signInOrSignUp } from './api'; // Импортируем наш метод
 
 function App() {
   const [tgUser, setTgUser] = useState<{ firstName: string; id: number } | null>(null);
-  // Заменяем строку ошибки на статус загрузки
   const [isLoading, setIsLoading] = useState(true);
+  const [backendStatus, setBackendStatus] = useState<string>('Ожидание авторизации на бэкенде...');
 
   const tenantConfig = {
     tenant_id: "super_gym_01",
-    branding: {
-      company_name: "Super Gym Premium",
-      primary_color: "#FF5733" 
-    }
+    branding: { company_name: "Super Gym Premium", primary_color: "#FF5733" }
   };
 
   const isTelegramContext = 
@@ -21,88 +19,97 @@ function App() {
 
   useEffect(() => {
     if (!isTelegramContext) {
-      setIsLoading(false); // Если мы точно в браузере, прекращаем загрузку
+      setIsLoading(false);
       return;
     }
 
     let attempts = 0;
     
-    const checkUserData = () => {
+    const checkAndAuth = async () => {
       attempts++;
-      
+      let rawData = '';
+
+      // 1. Пробуем достать initDataRaw через SDK
       try {
-        const { initData } = retrieveLaunchParams();
-        if (initData && initData.user) {
+        const { initDataRaw, initData } = retrieveLaunchParams();
+        if (initDataRaw && initData?.user) {
+          rawData = initDataRaw;
           setTgUser({ firstName: initData.user.firstName, id: initData.user.id });
-          setIsLoading(false);
-          return true;
         }
-      } catch (e) {
-        // Логируем ошибку только для разработчика в консоль
-        console.warn("Ожидание инициализации SDK...");
+      } catch (e) {}
+
+      // 2. Если SDK не успел, пробуем через нативный объект
+      if (!rawData) {
+        const nativeRaw = (window as any).Telegram?.WebApp?.initData;
+        const nativeUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
+        if (nativeRaw && nativeUser) {
+          rawData = nativeRaw;
+          setTgUser({ firstName: nativeUser.first_name, id: nativeUser.id });
+        }
       }
 
-      const nativeUser = (window as any).Telegram?.WebApp?.initDataUnsafe?.user;
-      if (nativeUser) {
-        setTgUser({
-          firstName: nativeUser.first_name,
-          id: nativeUser.id
-        });
-        setIsLoading(false);
-        return true;
+      // Если нашли сырые данные — отправляем их на бэк!
+      if (rawData) {
+        try {
+          setBackendStatus('Авторизация на бэкенде...');
+          const data = await signInOrSignUp(rawData);
+          
+          setBackendStatus('Успешно авторизован на бэкенде! Токен получен.');
+          console.log('Ответ бэкенда:', data);
+          
+          // Здесь ты можешь сохранить полученный JWT-токен в localStorage/state
+          // localStorage.setItem('token', data.token);
+          
+          setIsLoading(false);
+          return true;
+        } catch (err: any) {
+          setBackendStatus(`Ошибка бэка: ${err.message}`);
+          setIsLoading(false);
+          return true; // Останавливаем таймер, так как попытка была, но бэк ответил ошибкой
+        }
       }
 
       if (attempts >= 10) {
-        console.error("Данные не появились в window.Telegram спустя 1 сек. Возможно, ngrok затер хэш URL.");
-        setIsLoading(false); // Прекращаем крутить лоадер
+        setBackendStatus("Не удалось получить данные от Telegram для бэкенда.");
+        setIsLoading(false);
       }
       
       return false;
     };
 
-    const isFound = checkUserData();
-    
-    if (!isFound) {
-      const interval = setInterval(() => {
-        const found = checkUserData();
-        if (found) {
-          clearInterval(interval);
-        }
-      }, 100);
-
-      return () => clearInterval(interval);
-    }
+    // Запуск процесса
+    checkAndAuth().then(found => {
+      if (!found) {
+        const interval = setInterval(async () => {
+          const done = await checkAndAuth();
+          if (done) clearInterval(interval);
+        }, 100);
+        return () => clearInterval(interval);
+      }
+    });
   }, [isTelegramContext]);
 
   return (
-    <div style={{ 
-      padding: '20px', 
-      fontFamily: 'sans-serif',
-      minHeight: '100vh',
-      backgroundColor: '#121212', 
-      color: '#ffffff',
-      textAlign: 'center'
-    }}>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif', minHeight: '100vh', backgroundColor: '#121212', color: '#ffffff', textAlign: 'center' }}>
       <header style={{ marginBottom: '40px' }}>
-        <h1 style={{ fontSize: '26px', margin: '0' }}>
-          {tenantConfig.branding.company_name}
-        </h1>
+        <h1 style={{ fontSize: '26px', margin: '0' }}>{tenantConfig.branding.company_name}</h1>
         <small style={{ color: '#666' }}>ID зала: {tenantConfig.tenant_id}</small>
       </header>
 
       <main style={{ marginTop: '50px' }}>
-        {/* СЦЕНАРИЙ 1: Идет загрузка/ожидание данных от Телеграма */}
         {isLoading ? (
           <p style={{ fontSize: '16px', color: '#aaa' }}>Загрузка профиля...</p>
         ) : isTelegramContext && tgUser ? (
-          /* СЦЕНАРИЙ 2: Всё успешно определилось */
-          <p style={{ fontSize: '18px', color: '#aaa' }}>
-            Привет, <strong style={{ color: '#fff' }}>{tgUser.firstName}</strong>! <br />
-            (ID: {tgUser.id}) <br />
-            Готов к тренировке?
-          </p>
+          <div>
+            <p style={{ fontSize: '18px', color: '#aaa' }}>
+              Привет, <strong style={{ color: '#fff' }}>{tgUser.firstName}</strong>! (ID: {tgUser.id})
+            </p>
+            {/* Статус интеграции с бэком */}
+            <p style={{ fontSize: '14px', color: '#888', fontStyle: 'italic' }}>
+              Статус: {backendStatus}
+            </p>
+          </div>
         ) : (
-          /* СЦЕНАРИЙ 3: Это обычный браузер (или критическая ошибка) */
           <div style={{ backgroundColor: '#1e1e1e', padding: '16px', borderRadius: '12px', marginBottom: '20px' }}>
             <p style={{ fontSize: '16px', color: '#ffb703', margin: '0' }}>
               ⚠️ Работа приложения доступна только внутри Telegram.
@@ -112,17 +119,8 @@ function App() {
 
         <button style={{
           backgroundColor: tenantConfig.branding.primary_color, 
-          color: '#fff',
-          border: 'none',
-          padding: '16px 32px',
-          borderRadius: '12px',
-          fontSize: '16px',
-          fontWeight: 'bold',
-          width: '100%',
-          maxWidth: '280px',
-          marginTop: '20px',
-          cursor: 'pointer',
-          opacity: isLoading || (!tgUser && isTelegramContext) ? 0.6 : 1 // Блокируем, если не загрузилось
+          color: '#fff', border: 'none', padding: '16px 32px', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold', width: '100%', maxWidth: '280px', marginTop: '20px',
+          opacity: isLoading ? 0.6 : 1
         }} disabled={isLoading}>
           НАЧАТЬ ТРЕНИРОВКУ
         </button>
