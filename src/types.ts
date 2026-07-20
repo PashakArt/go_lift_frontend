@@ -1,7 +1,11 @@
-enum ExerciseTypeEnum {
-  DYNAMIC = "EXERCISE_TYPE_DYNAMIC",
-  BODYWEIGHT = "EXERCISE_TYPE_BODYWEIGHT",
-}
+export const ExerciseTypeEnum = {
+  DYNAMIC: "EXERCISE_TYPE_DYNAMIC",
+  BODYWEIGHT: "EXERCISE_TYPE_BODYWEIGHT",
+  CARDIO: "EXERCISE_TYPE_CARDIO",
+} as const;
+
+export type ExerciseTypeEnum =
+  (typeof ExerciseTypeEnum)[keyof typeof ExerciseTypeEnum];
 
 interface TenantTheme {
   mode: "dark" | "light";
@@ -31,7 +35,7 @@ export interface InitResponse {
 }
 
 export interface StartTrainingResponse {
-    session_id: string;
+  session_id: string;
 }
 
 export interface GetMuscleGroupsResponse {
@@ -44,4 +48,35 @@ export interface GetExercisesResponse {
   exercise_id: string;
   name: string;
   type: ExerciseTypeEnum;
+}
+
+export interface SetEntry {
+  set_id?: string;
+  set_number: number;
+  weight?: number;
+  reps?: number;
+  duration_seconds?: number;
+  distance_meters?: number;
+}
+
+export interface SelectedExercise {
+  exercise_id: string;
+  name: string;
+  type: string;
+  sets: SetEntry[];
+}
+
+export interface LogSetRequest {
+  session_id: string;
+  exercise_id: string;
+  set_number: number;
+  weight?: number;
+  reps?: number;
+  duration_seconds?: number;
+  distance_meters?: number;
+}
+
+export interface LogSetResponse {
+  set_id: string;
+  set_number: number;
 }

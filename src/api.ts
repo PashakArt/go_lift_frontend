@@ -1,4 +1,11 @@
-import type { GetExercisesResponse, GetMuscleGroupsResponse, InitResponse, StartTrainingResponse } from "./types";
+import type {
+  GetExercisesResponse,
+  GetMuscleGroupsResponse,
+  InitResponse,
+  LogSetRequest,
+  LogSetResponse,
+  StartTrainingResponse,
+} from "./types";
 
 // TODO убрать в енвы
 // const BASE_URL = "https://b063-185-22-65-230.ngrok-free.app";
@@ -14,8 +21,7 @@ export function getTenantIdFromUrl(): string {
 
   // Telegram Mini Apps часто прокидывает start_param в URL как tgWebAppStartParam
   const tenantFromQuery =
-    urlParams.get("start_param") ||
-    urlParams.get("tgWebAppStartParam");
+    urlParams.get("start_param") || urlParams.get("tgWebAppStartParam");
 
   if (tenantFromQuery) {
     return tenantFromQuery;
@@ -51,10 +57,8 @@ function getHeaders(
   return headers;
 }
 
-export async function init(
-  initDataRaw: string,
-): Promise<InitResponse> {
-  console.log('initDataRaw', initDataRaw)
+export async function init(initDataRaw: string): Promise<InitResponse> {
+  console.log("initDataRaw", initDataRaw);
   const response = await fetch(`${BASE_URL}/api/v1/init`, {
     method: "POST",
     headers: {
@@ -73,12 +77,11 @@ export async function init(
   const data: InitResponse = await response.json();
 
   if (data.token) {
-    localStorage.setItem('auth_token', data.token)
+    localStorage.setItem("auth_token", data.token);
   }
 
   return data;
 }
-
 
 export async function startTraining(): Promise<StartTrainingResponse> {
   const response = await fetch(`${BASE_URL}/api/v1/start`, {
@@ -95,7 +98,6 @@ export async function startTraining(): Promise<StartTrainingResponse> {
 
   return response.json();
 }
-
 
 export async function getMuscleGroups(
   initDataRaw: string,
@@ -114,7 +116,6 @@ export async function getMuscleGroups(
   return response.json();
 }
 
-
 export async function getExercises(
   muscleGroupId: string,
 ): Promise<GetExercisesResponse[]> {
@@ -132,4 +133,19 @@ export async function getExercises(
   }
 
   return response.json();
+}
+
+export async function logWorkoutSet(payload: LogSetRequest): Promise<LogSetResponse> {
+  const response = await fetch(`${BASE_URL}/api/v1/workout/sets`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Не удалось сохранить подход");
+  }
+
+  return response.json()
 }
