@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
-import { init, startTraining, getMuscleGroups, getExercises, getTenantIdFromUrl, logWorkoutSet } from './api';
+import { init, startTraining, getMuscleGroups, getExercises, getTenantIdFromUrl, logWorkoutSet, finishTraining } from './api';
 import type { 
   GetMuscleGroupsResponse, 
   GetExercisesResponse, 
@@ -74,6 +74,30 @@ export default function App() {
     }
   };
 
+  const handleFinishWorkout = async () => {
+    const confirmFinish = window.confirm('Вы уверены, что хотите завершить тренировку?');
+    if (!confirmFinish) return;
+
+    try {
+      setStep('LOADING');
+      setBackendStatus('Завершение тренировки...');
+      
+      await finishTraining();
+      
+      // Сбрасываем локальное состояние тренировки
+      setSessionId(null);
+      setWorkoutExercises([]);
+      setActiveExercise(null);
+      setSelectedMuscleGroup(null);
+      
+      // Возвращаем пользователя на главный экран
+      setStep('MAIN');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Ошибка';
+      alert(`Не удалось завершить тренировку: ${msg}`);
+      setStep('EXERCISE_LOG'); // Возвращаем назад в случае ошибки
+    }
+  };
 
   useEffect(() => {
     const auth = async () => {
@@ -293,6 +317,7 @@ export default function App() {
             onAddSet={handleAddSet}
             onBackToExercises={() => setStep('SELECT_EXERCISE')}
             onFinishExercise={() => setStep('SELECT_MUSCLE_GROUP')}
+            onFinishWorkout={handleFinishWorkout}
           />
         )}
       </main>

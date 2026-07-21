@@ -149,3 +149,15 @@ export async function logWorkoutSet(payload: LogSetRequest): Promise<LogSetRespo
 
   return response.json()
 }
+
+export async function finishTraining(): Promise<void> {
+  const response = await fetch(`${BASE_URL}/api/v1/finish`, {
+    method: 'POST',
+    headers: getHeaders(),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Не удалось завершить тренировку");
+  }
+}

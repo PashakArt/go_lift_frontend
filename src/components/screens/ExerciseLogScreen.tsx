@@ -16,6 +16,7 @@ interface ExerciseLogScreenProps {
   onAddSet: () => void;
   onBackToExercises: () => void;
   onFinishExercise: () => void;
+  onFinishWorkout: () => void;
 }
 
 export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
@@ -33,6 +34,7 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
   onAddSet,
   onBackToExercises,
   onFinishExercise,
+  onFinishWorkout,
 }) => {
   const { background_color, text_color, primary_color, accent_color, surface_color } = branding.theme;
 
@@ -44,6 +46,22 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
           style={{ background: 'none', border: 'none', color: primary_color, cursor: 'pointer', fontSize: '16px' }}
         >
           ← К упражнениям
+        </button>
+
+        <button 
+          onClick={onFinishWorkout}
+          style={{
+            backgroundColor: '#ef4444',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '6px 12px',
+            fontWeight: 'bold',
+            fontSize: '13px',
+            cursor: 'pointer'
+          }}
+        >
+          Завершить тренировку 🏁
         </button>
       </div>
 
