@@ -264,8 +264,12 @@ export default function App() {
       backgroundColor: branding.theme.background_color, color: branding.theme.text_color,
       display: 'flex', flexDirection: 'column', alignItems: 'center'
     }}>
-      <Header branding={branding} tenantId={tenantId} />
-
+      <Header 
+        branding={branding} 
+        tenantId={tenantId} 
+        sessionId={sessionId}
+        onFinishWorkout={handleFinishWorkout}
+      />
       <main style={{ width: '100%', maxWidth: '400px', flex: 1 }}>
         {step === 'LOADING' && (
           <LoadingScreen status={backendStatus} branding={branding} />
@@ -317,7 +321,6 @@ export default function App() {
             onAddSet={handleAddSet}
             onBackToExercises={() => setStep('SELECT_EXERCISE')}
             onFinishExercise={() => setStep('SELECT_MUSCLE_GROUP')}
-            onFinishWorkout={handleFinishWorkout}
           />
         )}
       </main>
