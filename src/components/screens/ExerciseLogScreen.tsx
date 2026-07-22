@@ -13,7 +13,7 @@ interface ExerciseLogScreenProps {
   setRepsInput: (val: string) => void;
   setDurationInput: (val: string) => void;
   setDistanceInput: (val: string) => void;
-  onAddSet: () => Promise<void> | void;
+  onSaveSet: (setId: string | null) => Promise<void> | void; 
   onBackToExercises: () => void;
   onFinishExercise: () => void;
 }
@@ -29,7 +29,7 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
   setRepsInput,
   setDurationInput,
   setDistanceInput,
-  onAddSet,
+  onSaveSet,
   onBackToExercises,
   onFinishExercise,
 }) => {
@@ -39,9 +39,10 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [editingSetId, setEditingSetId] = useState<string | null>(null);
+
   const fetchSets = useCallback(async () => {
     try {
-      setIsLoading(true);
       setError(null);
       const sets = await getCompletedExercises(activeExercise.exercise_id);
       setCompletedSets(sets);
@@ -57,8 +58,6 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
     let isCancelled = false;
 
     const loadData = async () => {
-      setIsLoading(true);
-      
       try {
         const sets = await getCompletedExercises(activeExercise.exercise_id);
         if (!isCancelled) {
@@ -84,9 +83,25 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
     };
   }, [activeExercise.exercise_id]);
 
-  // Обертка над добавлением подхода, чтобы обновлять список подходов
-  const handleAddSetAndRefresh = async () => {
-    await onAddSet();
+  const handleSelectSetForEdit = (set: CompletedSet) => {
+    setEditingSetId(set.set_id);
+    if (set.weight !== undefined) setWeightInput(String(set.weight));
+    if (set.reps !== undefined) setRepsInput(String(set.reps));
+    if (set.duration_sec !== undefined) setDurationInput(String(set.duration_sec));
+    if (set.distance_m !== undefined) setDistanceInput(String(set.distance_m));
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSetId(null);
+    setWeightInput('');
+    setRepsInput('');
+    setDurationInput('');
+    setDistanceInput('');
+  };
+
+  const handleSaveAndRefresh = async () => {
+    await onSaveSet(editingSetId);
+    handleCancelEdit();
     await fetchSets();
   };
 
@@ -105,7 +120,10 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
 
       {/* Выполненные подходы */}
       <div style={{ backgroundColor: surface_color, borderRadius: '12px', padding: '12px', marginBottom: '20px' }}>
-        <h4 style={{ margin: '0 0 10px 0', opacity: 0.8 }}>Выполненные подходы:</h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h4 style={{ margin: 0, opacity: 0.8 }}>Выполненные подходы:</h4>
+          <span style={{ fontSize: '11px', opacity: 0.5 }}>Нажмите для редактирования</span>
+        </div>
 
         {isLoading ? (
           <div style={{ fontSize: '14px', opacity: 0.6, padding: '8px 0' }}>Загрузка подходов...</div>
@@ -114,33 +132,57 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
         ) : completedSets.length === 0 ? (
           <div style={{ fontSize: '14px', opacity: 0.5, padding: '8px 0' }}>Подходов пока нет</div>
         ) : (
-          completedSets.map((set: CompletedSet) => (
-            <div 
-              key={set.set_number} 
-              style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #333' }}
-            >
-              <span>Подход {set.set_number}</span>
-              <strong>
-                {/* Силовые / Вес тела */}
-                {set.reps !== undefined && `${set.weight ?? 0} кг × ${set.reps} повт.`}
-
-                {/* Кардио / Время и Дистанция */}
-                {(set.distance_m !== undefined || set.duration_sec !== undefined) && (
-                  <>
-                    {set.distance_m !== undefined ? `${set.distance_m} м` : ''}
-                    {set.distance_m !== undefined && set.duration_sec !== undefined ? ' за ' : ''}
-                    {set.duration_sec !== undefined ? `${set.duration_sec} сек` : ''}
-                  </>
-                )}
-              </strong>
-            </div>
-          ))
+          completedSets.map((set: CompletedSet) => {
+            const isSelected = set.set_id === editingSetId;
+            return (
+              <div 
+                key={set.set_id || set.set_number} 
+                onClick={() => handleSelectSetForEdit(set)}
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  padding: '10px', 
+                  marginBottom: '4px',
+                  borderRadius: '8px',
+                  borderBottom: isSelected ? 'none' : '1px solid #333',
+                  backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                  borderLeft: isSelected ? `4px solid ${accent_color}` : 'none',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+              >
+                <span>Подход {set.set_number} {isSelected ? '✏️' : ''}</span>
+                <strong>
+                  {set.reps !== undefined && `${set.weight ?? 0} кг × ${set.reps} повт.`}
+                  {(set.distance_m !== undefined || set.duration_sec !== undefined) && (
+                    <>
+                      {set.distance_m !== undefined ? `${set.distance_m} м` : ''}
+                      {set.distance_m !== undefined && set.duration_sec !== undefined ? ' за ' : ''}
+                      {set.duration_sec !== undefined ? `${set.duration_sec} сек` : ''}
+                    </>
+                  )}
+                </strong>
+              </div>
+            );
+          })
         )}
       </div>
 
-      {/* Форма добавления подхода */}
+      {/* Форма добавления / редактирования подхода */}
       <div style={{ backgroundColor: surface_color, borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
-        <h4 style={{ margin: '0 0 12px 0' }}>Добавить подход</h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h4 style={{ margin: 0 }}>
+            {editingSetId ? 'Редактировать подход' : 'Добавить подход'}
+          </h4>
+          {editingSetId && (
+            <button 
+              onClick={handleCancelEdit}
+              style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '12px', cursor: 'pointer' }}
+            >
+              Отмена
+            </button>
+          )}
+        </div>
         
         {activeExercise.type === 'EXERCISE_TYPE_CARDIO' ? (
           <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
@@ -181,10 +223,19 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
         )}
 
         <button 
-          onClick={handleAddSetAndRefresh}
-          style={{ width: '100%', backgroundColor: accent_color, border: 'none', color: '#fff', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+          onClick={handleSaveAndRefresh}
+          style={{ 
+            width: '100%', 
+            backgroundColor: editingSetId ? primary_color : accent_color, 
+            border: 'none', 
+            color: '#fff', 
+            padding: '12px', 
+            borderRadius: '8px', 
+            fontWeight: 'bold', 
+            cursor: 'pointer' 
+          }}
         >
-          + Записать подход
+          {editingSetId ? '💾 Сохранить изменения' : '+ Записать подход'}
         </button>
       </div>
 

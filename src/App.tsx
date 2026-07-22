@@ -7,7 +7,6 @@ import type {
   InitResponse, 
   TenantBranding, 
   SelectedExercise,
-  SetEntry,
   LogSetRequest
 } from './types';
 
@@ -48,7 +47,7 @@ export default function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   const [activeExercise, setActiveExercise] = useState<GetExercisesResponse | null>(null);
-  const [workoutExercises, setWorkoutExercises] = useState<SelectedExercise[]>([]);
+  const [, setWorkoutExercises] = useState<SelectedExercise[]>([]);
 
   const [weightInput, setWeightInput] = useState<string>('');
   const [repsInput, setRepsInput] = useState<string>('');
@@ -189,29 +188,29 @@ export default function App() {
     setStep('EXERCISE_LOG');
   };
 
-  const handleAddSet = async () => {
+const handleSaveSet = async (setId: string | null) => {
     if (!activeExercise || !sessionId) {
       alert('Нет активной сессии или не выбрано упражнение');
       return;
     }
 
-    const weight = weightInput ? parseFloat(weightInput) : undefined;
-    const reps = repsInput ? parseInt(repsInput, 10) : undefined;
-    const duration_seconds = durationInput ? parseInt(durationInput, 10) : undefined;
-    const distance_meters = distanceInput ? parseInt(distanceInput, 10) : undefined;
+    const isCardio = activeExercise.type === 'EXERCISE_TYPE_CARDIO';
+
+    // Для кардио берем только время и дистанцию, для остальных — вес и повторения
+    const weight = !isCardio && weightInput !== '' ? parseFloat(weightInput) : undefined;
+    const reps = !isCardio && repsInput !== '' ? parseInt(repsInput, 10) : undefined;
+    const duration_seconds = isCardio && durationInput !== '' ? parseInt(durationInput, 10) : undefined;
+    const distance_meters = isCardio && distanceInput !== '' ? parseInt(distanceInput, 10) : undefined;
 
     if (reps === undefined && duration_seconds === undefined && distance_meters === undefined) {
-      alert('Укажите повторения, время или дистанцию');
+      alert('Заполните параметры подхода');
       return;
     }
 
-    const existingIdx = workoutExercises.findIndex((e) => e.exercise_id === activeExercise.exercise_id);
-    const nextSetNumber = existingIdx >= 0 ? workoutExercises[existingIdx].sets.length + 1 : 1;
-
     const payload: LogSetRequest = {
+      set_id: setId ?? undefined,
       session_id: sessionId,
       exercise_id: activeExercise.exercise_id,
-      set_number: nextSetNumber,
       weight,
       reps,
       duration_seconds,
@@ -219,33 +218,9 @@ export default function App() {
     };
 
     try {
-      const res = await logWorkoutSet(payload);
-      const newSet: SetEntry = {
-        set_id: res.set_id,
-        set_number: res.set_number || nextSetNumber,
-        weight,
-        reps,
-        duration_seconds,
-        distance_meters,
-      };
+      await logWorkoutSet(payload);
 
-      setWorkoutExercises((prev) => {
-        if (existingIdx >= 0) {
-          const updated = [...prev];
-          updated[existingIdx].sets.push(newSet);
-          return updated;
-        }
-        return [
-          ...prev,
-          {
-            exercise_id: activeExercise.exercise_id,
-            name: activeExercise.name,
-            type: activeExercise.type,
-            sets: [newSet],
-          },
-        ];
-      });
-
+      // Сбрасываем значения инпутов
       setWeightInput('');
       setRepsInput('');
       setDurationInput('');
@@ -255,8 +230,6 @@ export default function App() {
       alert(`Ошибка сохранения подхода: ${msg}`);
     }
   };
-
-  const currentExerciseData = workoutExercises.find(e => e.exercise_id === activeExercise?.exercise_id);
 
   return (
     <div style={{ 
@@ -308,7 +281,6 @@ export default function App() {
         {step === 'EXERCISE_LOG' && activeExercise && (
           <ExerciseLogScreen 
             activeExercise={activeExercise}
-            currentExerciseData={currentExerciseData}
             branding={branding}
             weightInput={weightInput}
             repsInput={repsInput}
@@ -318,7 +290,7 @@ export default function App() {
             setRepsInput={setRepsInput}
             setDurationInput={setDurationInput}
             setDistanceInput={setDistanceInput}
-            onAddSet={handleAddSet}
+            onSaveSet={handleSaveSet}
             onBackToExercises={() => setStep('SELECT_EXERCISE')}
             onFinishExercise={() => setStep('SELECT_MUSCLE_GROUP')}
           />

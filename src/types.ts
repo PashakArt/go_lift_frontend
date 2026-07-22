@@ -69,7 +69,7 @@ export interface SelectedExercise {
 export interface LogSetRequest {
   session_id: string;
   exercise_id: string;
-  set_number: number;
+  set_id?: string;
   weight?: number;
   reps?: number;
   duration_seconds?: number;
@@ -82,6 +82,7 @@ export interface LogSetResponse {
 }
 
 export interface CompletedSet {
+  set_id: string;
   set_number: number;
   weight?: number;
   reps?: number;
