@@ -1,4 +1,5 @@
 import type {
+  CompletedSet,
   GetExercisesResponse,
   GetMuscleGroupsResponse,
   InitResponse,
@@ -7,11 +8,7 @@ import type {
   StartTrainingResponse,
 } from "./types";
 
-// TODO убрать в енвы
-// const BASE_URL = "https://b063-185-22-65-230.ngrok-free.app";
 const BASE_URL = import.meta.env.VITE_BASE_URL;
-
-console.log(123, BASE_URL);
 
 export function getTenantIdFromUrl(): string {
   const DEFAULT_TENANT = "00000000-0000-0000-0000-000000000000";
@@ -160,4 +157,21 @@ export async function finishTraining(): Promise<void> {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || "Не удалось завершить тренировку");
   }
+}
+
+export async function getCompletedExercises(exerciseId: string): Promise<CompletedSet[]> {
+  const response = await fetch(
+    `${BASE_URL}/api/v1/exercises/${exerciseId}/completed`,
+    {
+      method: "GET",
+      headers: getHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Не удалось получить выполненные упражнения");
+  }
+
+  return response.json()
 }

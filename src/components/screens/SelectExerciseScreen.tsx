@@ -31,7 +31,6 @@ export const SelectExerciseScreen: React.FC<SelectExerciseScreenProps> = ({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {exercises.map((ex) => {
-          console.log('ex.name', ex.name)
           const exImgSrc = getExerciseImage(ex.name);
           return (
             <div 

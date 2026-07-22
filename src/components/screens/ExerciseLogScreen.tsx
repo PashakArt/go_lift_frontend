@@ -1,9 +1,9 @@
-import React from 'react';
-import type { GetExercisesResponse, SelectedExercise, SetEntry, TenantBranding } from '../../types';
+import React, { useEffect, useState, useCallback } from 'react';
+import type { CompletedSet, GetExercisesResponse, TenantBranding } from '../../types';
+import { getCompletedExercises } from '../../api';
 
 interface ExerciseLogScreenProps {
   activeExercise: GetExercisesResponse;
-  currentExerciseData?: SelectedExercise;
   branding: TenantBranding;
   weightInput: string;
   repsInput: string;
@@ -13,14 +13,13 @@ interface ExerciseLogScreenProps {
   setRepsInput: (val: string) => void;
   setDurationInput: (val: string) => void;
   setDistanceInput: (val: string) => void;
-  onAddSet: () => void;
+  onAddSet: () => Promise<void> | void;
   onBackToExercises: () => void;
   onFinishExercise: () => void;
 }
 
 export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
   activeExercise,
-  currentExerciseData,
   branding,
   weightInput,
   repsInput,
@@ -36,6 +35,61 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
 }) => {
   const { background_color, text_color, primary_color, accent_color, surface_color } = branding.theme;
 
+  const [completedSets, setCompletedSets] = useState<CompletedSet[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSets = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const sets = await getCompletedExercises(activeExercise.exercise_id);
+      setCompletedSets(sets);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Ошибка загрузки подходов';
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeExercise.exercise_id]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadData = async () => {
+      setIsLoading(true);
+      
+      try {
+        const sets = await getCompletedExercises(activeExercise.exercise_id);
+        if (!isCancelled) {
+          setCompletedSets(sets);
+          setError(null);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          const msg = err instanceof Error ? err.message : 'Ошибка загрузки подходов';
+          setError(msg);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activeExercise.exercise_id]);
+
+  // Обертка над добавлением подхода, чтобы обновлять список подходов
+  const handleAddSetAndRefresh = async () => {
+    await onAddSet();
+    await fetchSets();
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
@@ -50,22 +104,39 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
       <h2 style={{ fontSize: '20px', marginBottom: '15px' }}>{activeExercise.name}</h2>
 
       {/* Выполненные подходы */}
-      {currentExerciseData && currentExerciseData.sets.length > 0 && (
-        <div style={{ backgroundColor: surface_color, borderRadius: '12px', padding: '12px', marginBottom: '20px' }}>
-          <h4 style={{ margin: '0 0 10px 0', opacity: 0.8 }}>Выполненные подходы:</h4>
-          {currentExerciseData.sets.map((set: SetEntry) => (
-            <div key={set.set_number} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #333' }}>
+      <div style={{ backgroundColor: surface_color, borderRadius: '12px', padding: '12px', marginBottom: '20px' }}>
+        <h4 style={{ margin: '0 0 10px 0', opacity: 0.8 }}>Выполненные подходы:</h4>
+
+        {isLoading ? (
+          <div style={{ fontSize: '14px', opacity: 0.6, padding: '8px 0' }}>Загрузка подходов...</div>
+        ) : error ? (
+          <div style={{ fontSize: '13px', color: '#ef4444', padding: '8px 0' }}>{error}</div>
+        ) : completedSets.length === 0 ? (
+          <div style={{ fontSize: '14px', opacity: 0.5, padding: '8px 0' }}>Подходов пока нет</div>
+        ) : (
+          completedSets.map((set: CompletedSet) => (
+            <div 
+              key={set.set_number} 
+              style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #333' }}
+            >
               <span>Подход {set.set_number}</span>
               <strong>
-                {set.reps !== undefined ? `${set.weight || 0} кг × ${set.reps} повт.` : ''}
-                {set.distance_meters !== undefined || set.duration_seconds !== undefined 
-                  ? `${set.distance_meters || 0} м за ${set.duration_seconds || 0} сек` 
-                  : ''}
+                {/* Силовые / Вес тела */}
+                {set.reps !== undefined && `${set.weight ?? 0} кг × ${set.reps} повт.`}
+
+                {/* Кардио / Время и Дистанция */}
+                {(set.distance_m !== undefined || set.duration_sec !== undefined) && (
+                  <>
+                    {set.distance_m !== undefined ? `${set.distance_m} м` : ''}
+                    {set.distance_m !== undefined && set.duration_sec !== undefined ? ' за ' : ''}
+                    {set.duration_sec !== undefined ? `${set.duration_sec} сек` : ''}
+                  </>
+                )}
               </strong>
             </div>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
       {/* Форма добавления подхода */}
       <div style={{ backgroundColor: surface_color, borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
@@ -110,7 +181,7 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
         )}
 
         <button 
-          onClick={onAddSet}
+          onClick={handleAddSetAndRefresh}
           style={{ width: '100%', backgroundColor: accent_color, border: 'none', color: '#fff', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
         >
           + Записать подход

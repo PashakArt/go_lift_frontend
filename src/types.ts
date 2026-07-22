@@ -80,3 +80,11 @@ export interface LogSetResponse {
   set_id: string;
   set_number: number;
 }
+
+export interface CompletedSet {
+  set_number: number;
+  weight?: number;
+  reps?: number;
+  duration_sec?: number;
+  distance_m?: number;
+}
