@@ -85,10 +85,10 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
 
   const handleSelectSetForEdit = (set: CompletedSet) => {
     setEditingSetId(set.set_id);
-    if (set.weight !== undefined) setWeightInput(String(set.weight));
-    if (set.reps !== undefined) setRepsInput(String(set.reps));
-    if (set.duration_sec !== undefined) setDurationInput(String(set.duration_sec));
-    if (set.distance_m !== undefined) setDistanceInput(String(set.distance_m));
+    setWeightInput(set.weight !== undefined && set.weight !== null ? String(set.weight) : '');
+    setRepsInput(set.reps !== undefined && set.reps !== null ? String(set.reps) : '');
+    setDurationInput(set.duration_sec !== undefined && set.duration_sec !== null ? String(set.duration_sec) : '');
+    setDistanceInput(set.distance_m !== undefined && set.distance_m !== null ? String(set.distance_m) : '');
   };
 
   const handleCancelEdit = () => {
@@ -108,7 +108,7 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
-        <button 
+        <button
           onClick={onBackToExercises}
           style={{ background: 'none', border: 'none', color: primary_color, cursor: 'pointer', fontSize: '16px' }}
         >
@@ -135,13 +135,13 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
           completedSets.map((set: CompletedSet) => {
             const isSelected = set.set_id === editingSetId;
             return (
-              <div 
-                key={set.set_id || set.set_number} 
+              <div
+                key={set.set_id || set.set_number}
                 onClick={() => handleSelectSetForEdit(set)}
-                style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  padding: '10px', 
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '10px',
                   marginBottom: '4px',
                   borderRadius: '8px',
                   borderBottom: isSelected ? 'none' : '1px solid #333',
@@ -153,8 +153,24 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
               >
                 <span>Подход {set.set_number} {isSelected ? '✏️' : ''}</span>
                 <strong>
-                  {set.reps !== undefined && `${set.weight ?? 0} кг × ${set.reps} повт.`}
-                  {(set.distance_m !== undefined || set.duration_sec !== undefined) && (
+                  {/* СТАТИКА */}
+                  {activeExercise.type === 'EXERCISE_TYPE_STATIC' && (
+                    <>
+                      {set.weight ? `${set.weight} кг × ` : ''}
+                      {set.duration_sec ?? 0} сек
+                    </>
+                  )}
+
+                  {/* ДИНАМИКА / ВЕС ТЕЛА */}
+                  {activeExercise.type !== 'EXERCISE_TYPE_STATIC' && activeExercise.type !== 'EXERCISE_TYPE_CARDIO' && (
+                    <>
+                      {set.weight ? `${set.weight} кг × ` : ''}
+                      {set.reps ?? 0} повт.
+                    </>
+                  )}
+
+                  {/* КАРДИО */}
+                  {activeExercise.type === 'EXERCISE_TYPE_CARDIO' && (
                     <>
                       {set.distance_m !== undefined ? `${set.distance_m} м` : ''}
                       {set.distance_m !== undefined && set.duration_sec !== undefined ? ' за ' : ''}
@@ -168,80 +184,105 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
         )}
       </div>
 
-      {/* Форма добавления / редактирования подхода */}
-      <div style={{ backgroundColor: surface_color, borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+      {/* Карточка добавления/редактирования */}
+      <div style={{ backgroundColor: surface_color, borderRadius: '12px', padding: '12px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <h4 style={{ margin: 0 }}>
+          <h3 style={{ margin: 0, fontSize: '16px' }}>
             {editingSetId ? 'Редактировать подход' : 'Добавить подход'}
-          </h4>
+          </h3>
           {editingSetId && (
-            <button 
+            <button
               onClick={handleCancelEdit}
-              style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '12px', cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '13px' }}
             >
               Отмена
             </button>
           )}
         </div>
-        
+
+        {/* Форма ввода параметров подхода */}
         {activeExercise.type === 'EXERCISE_TYPE_CARDIO' ? (
+          /* КАРДИО: Дистанция + Время */
           <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: '12px', opacity: 0.7, display: 'block', marginBottom: '4px' }}>Дистанция (м)</label>
-              <input 
+              <input
                 type="number" value={distanceInput} onChange={(e) => setDistanceInput(e.target.value)} placeholder="1000"
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: background_color, color: text_color }}
-              />
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: background_color, color: text_color, boxSizing: 'border-box' }} />
             </div>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: '12px', opacity: 0.7, display: 'block', marginBottom: '4px' }}>Время (сек)</label>
-              <input 
+              <input
                 type="number" value={durationInput} onChange={(e) => setDurationInput(e.target.value)} placeholder="300"
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: background_color, color: text_color }}
-              />
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: background_color, color: text_color, boxSizing: 'border-box' }} />
+            </div>
+          </div>
+        ) : activeExercise.type === 'EXERCISE_TYPE_STATIC' ? (
+          /* СТАТИКА: Доп. вес + Время удержания */
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '12px', opacity: 0.7, display: 'block', marginBottom: '4px' }}>Доп. вес (кг)</label>
+              <input
+                type="number" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} placeholder="0"
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: background_color, color: text_color, boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '12px', opacity: 0.7, display: 'block', marginBottom: '4px' }}>Время (сек)</label>
+              <input
+                type="number" value={durationInput} onChange={(e) => setDurationInput(e.target.value)} placeholder="60"
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: background_color, color: text_color, boxSizing: 'border-box' }} />
             </div>
           </div>
         ) : (
+          /* СИЛОВЫЕ / ВЕС ТЕЛА: Вес + Повторения */
           <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: '12px', opacity: 0.7, display: 'block', marginBottom: '4px' }}>
                 Вес {activeExercise.type === 'EXERCISE_TYPE_BODYWEIGHT' ? '(доп. кг)' : '(кг)'}
               </label>
-              <input 
+              <input
                 type="number" value={weightInput} onChange={(e) => setWeightInput(e.target.value)} placeholder="0"
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: background_color, color: text_color }}
-              />
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: background_color, color: text_color, boxSizing: 'border-box' }} />
             </div>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: '12px', opacity: 0.7, display: 'block', marginBottom: '4px' }}>Повторения</label>
-              <input 
+              <input
                 type="number" value={repsInput} onChange={(e) => setRepsInput(e.target.value)} placeholder="10"
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: background_color, color: text_color }}
-              />
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #444', backgroundColor: background_color, color: text_color, boxSizing: 'border-box' }} />
             </div>
           </div>
         )}
 
-        <button 
+        <button
           onClick={handleSaveAndRefresh}
-          style={{ 
-            width: '100%', 
-            backgroundColor: editingSetId ? primary_color : accent_color, 
-            border: 'none', 
-            color: '#fff', 
-            padding: '12px', 
-            borderRadius: '8px', 
-            fontWeight: 'bold', 
-            cursor: 'pointer' 
+          style={{
+            width: '100%',
+            backgroundColor: editingSetId ? primary_color : accent_color,
+            border: 'none',
+            color: '#fff',
+            padding: '12px',
+            borderRadius: '8px',
+            fontWeight: 'bold',
+            cursor: 'pointer'
           }}
         >
           {editingSetId ? '💾 Сохранить изменения' : '+ Записать подход'}
         </button>
       </div>
 
-      <button 
+      {/* Кнопка завершения упражнения */}
+      <button
         onClick={onFinishExercise}
-        style={{ width: '100%', backgroundColor: primary_color, border: 'none', color: '#fff', padding: '14px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
+        style={{
+          width: '100%',
+          backgroundColor: primary_color,
+          border: 'none',
+          color: '#fff',
+          padding: '14px',
+          borderRadius: '12px',
+          fontWeight: 'bold',
+          cursor: 'pointer'
+        }}
       >
         Закончить упражнение
       </button>

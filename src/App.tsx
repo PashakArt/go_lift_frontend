@@ -188,18 +188,19 @@ export default function App() {
     setStep('EXERCISE_LOG');
   };
 
-const handleSaveSet = async (setId: string | null) => {
+  const handleSaveSet = async (setId: string | null) => {
     if (!activeExercise || !sessionId) {
       alert('Нет активной сессии или не выбрано упражнение');
       return;
     }
 
     const isCardio = activeExercise.type === 'EXERCISE_TYPE_CARDIO';
+    const isStatic = activeExercise.type === 'EXERCISE_TYPE_STATIC';
 
-    // Для кардио берем только время и дистанцию, для остальных — вес и повторения
+    // Вытаскиваем нужные поля в зависимости от типа
     const weight = !isCardio && weightInput !== '' ? parseFloat(weightInput) : undefined;
-    const reps = !isCardio && repsInput !== '' ? parseInt(repsInput, 10) : undefined;
-    const duration_seconds = isCardio && durationInput !== '' ? parseInt(durationInput, 10) : undefined;
+    const reps = !isCardio && !isStatic && repsInput !== '' ? parseInt(repsInput, 10) : undefined;
+    const duration_seconds = (isCardio || isStatic) && durationInput !== '' ? parseInt(durationInput, 10) : undefined;
     const distance_meters = isCardio && distanceInput !== '' ? parseInt(distanceInput, 10) : undefined;
 
     if (reps === undefined && duration_seconds === undefined && distance_meters === undefined) {
@@ -220,7 +221,6 @@ const handleSaveSet = async (setId: string | null) => {
     try {
       await logWorkoutSet(payload);
 
-      // Сбрасываем значения инпутов
       setWeightInput('');
       setRepsInput('');
       setDurationInput('');

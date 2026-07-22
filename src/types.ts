@@ -2,6 +2,7 @@ export const ExerciseTypeEnum = {
   DYNAMIC: "EXERCISE_TYPE_DYNAMIC",
   BODYWEIGHT: "EXERCISE_TYPE_BODYWEIGHT",
   CARDIO: "EXERCISE_TYPE_CARDIO",
+  STATIC: "EXERCISE_TYPE_STATIC",
 } as const;
 
 export type ExerciseTypeEnum =
