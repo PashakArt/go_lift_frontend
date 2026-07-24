@@ -90,3 +90,7 @@ export interface CompletedSet {
   duration_sec?: number;
   distance_m?: number;
 }
+
+export interface TrainingDaysResponse {
+  days: string[];
+}

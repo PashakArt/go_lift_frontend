@@ -6,6 +6,7 @@ import type {
   LogSetRequest,
   LogSetResponse,
   StartTrainingResponse,
+  TrainingDaysResponse,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
@@ -174,4 +175,31 @@ export async function getCompletedExercises(exerciseId: string): Promise<Complet
   }
 
   return response.json()
+}
+
+export async function getTrainingDays(
+  year: number,
+  month: number,
+): Promise<TrainingDaysResponse> {
+  const queryParams = new URLSearchParams({
+    year: year.toString(),
+    month: month.toString(),
+  });
+
+  const response = await fetch(
+    `${BASE_URL}/api/v1/workouts/calendar?${queryParams.toString()}`,
+    {
+      method: "GET",
+      headers: getHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.message || "Не удалось получить тренировочные дни",
+    );
+  }
+
+  return response.json();
 }

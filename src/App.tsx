@@ -102,6 +102,7 @@ export default function App() {
     const auth = async () => {
       let rawData = '';
 
+      // 1. Пробуем аккуратно достать данные из Telegram SDK или Telegram WebApp
       if (isTelegramContext) {
         try {
           const launchParams = retrieveLaunchParams();
@@ -109,12 +110,12 @@ export default function App() {
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const sdkData = launchParams.initData as Record<string, any> | undefined;
-          if (typeof initDataRaw === 'string' && initDataRaw && sdkData?.user) {
+          if (initDataRaw && sdkData?.user) {
             rawData = initDataRaw;
             setTgUser({ firstName: sdkData.user.firstName, id: sdkData.user.id });
           }
         } catch {
-          // Игнорируем SDK ошибки
+          // Игнорируем SDK ошибки, если запустились вне Telegram
         }
 
         if (!rawData) {
@@ -127,11 +128,14 @@ export default function App() {
         }
       }
 
+      // 2. Если мы на Localhost и данные не появились — берем MOCK_INIT_DATA
       if (!rawData) {
+        console.warn("⚠️ Telegram Context не найден. Используем MOCK_INIT_DATA для разработки");
         rawData = MOCK_INIT_DATA;
         setTgUser({ firstName: 'Локальный Атлет', id: 77777 });
       }
 
+      // 3. Авторизация на бэкенде
       try {
         setInitDataRawState(rawData);
         setBackendStatus('Авторизация на бэкенде...');
@@ -154,7 +158,7 @@ export default function App() {
     };
 
     auth();
-  }, [isTelegramContext]);
+  }, []);
 
   const handleStartWorkout = async () => {
     try {
