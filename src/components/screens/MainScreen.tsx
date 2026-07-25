@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { TenantBranding, WorkoutsForDayResponse } from '../../types';
+import type { SetEntry, TenantBranding, WorkoutsForDayResponse } from '../../types';
 import { getTrainingDays, getWorkoutsForDay } from '../../api';
 
 interface MainScreenProps {
@@ -8,6 +8,39 @@ interface MainScreenProps {
   branding: TenantBranding;
   onStartWorkout: () => void;
 }
+
+const formatSetDetails = (set: SetEntry) => {
+  const parts: string[] = [];
+
+  // Вес
+  if (set.weight) {
+    parts.push(`${set.weight}кг`);
+  }
+
+  // Повторения
+  if (set.reps) {
+    parts.push(`${set.reps} повт`);
+  }
+
+  // Время (статические упражнения / планка)
+  if (set.duration_seconds) {
+    const min = Math.floor(set.duration_seconds / 60);
+    const sec = set.duration_seconds % 60;
+    if (min > 0) {
+      parts.push(`${min}м ${sec}с`);
+    } else {
+      parts.push(`${sec} сек`);
+    }
+  }
+
+  // Дистанция
+  if (set.distance_meters) {
+    parts.push(`${set.distance_meters}м`);
+  }
+
+  return parts.join(" × ");
+};
+
 
 const MONTH_NAMES = [
   "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
@@ -166,7 +199,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
             borderRadius: '20px',
             marginBottom: '10px'
           }}>
-            • Сессия активна
+            • Тренировка активна
           </div>
         )}
 
@@ -414,7 +447,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                 }}
               >
                 <div style={{ color: primary_color, fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>
-                  Сессия #{idx + 1} {sess.duration_seconds > 0 && `• ${Math.round(sess.duration_seconds / 60)} мин`}
+                  Тренировка #{idx + 1} {sess.duration_seconds > 0 && `• ${Math.round(sess.duration_seconds / 60)} мин`}
                 </div>
 
                 {sess.exercises.map((ex) => (
@@ -423,20 +456,23 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                       {ex.name}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {ex.sets.map((set, sIdx) => (
-                        <span 
-                          key={set.set_id || sIdx}
-                          style={{
-                            backgroundColor: `${text_color}10`,
-                            color: text_color,
-                            fontSize: '12px',
-                            padding: '3px 8px',
-                            borderRadius: '6px'
-                          }}
-                        >
-                          #{set.set_number}: {set.weight ? `${set.weight}кг × ` : ''}{set.reps ? `${set.reps} повт` : ''}{set.duration_seconds ? `${set.duration_seconds} сек` : ''}
-                        </span>
-                      ))}
+                      {ex.sets.map((set, sIdx) => {
+                        const details = formatSetDetails(set);
+                        return (
+                          <span 
+                            key={set.set_id || sIdx}
+                            style={{
+                              backgroundColor: `${text_color}10`,
+                              color: text_color,
+                              fontSize: '12px',
+                              padding: '3px 8px',
+                              borderRadius: '6px'
+                            }}
+                          >
+                            #{set.set_number}{details ? `: ${details}` : ''}
+                          </span>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

@@ -87,7 +87,7 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
     setEditingSetId(set.set_id);
     setWeightInput(set.weight !== undefined && set.weight !== null ? String(set.weight) : '');
     setRepsInput(set.reps !== undefined && set.reps !== null ? String(set.reps) : '');
-    setDurationInput(set.duration_sec !== undefined && set.duration_sec !== null ? String(set.duration_sec) : '');
+    setDurationInput(set.duration_seconds !== undefined && set.duration_seconds !== null ? String(set.duration_seconds) : '');
     setDistanceInput(set.distance_m !== undefined && set.distance_m !== null ? String(set.distance_m) : '');
   };
 
@@ -157,7 +157,7 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
                   {activeExercise.type === 'EXERCISE_TYPE_STATIC' && (
                     <>
                       {set.weight ? `${set.weight} кг × ` : ''}
-                      {set.duration_sec ?? 0} сек
+                      {set.duration_seconds ?? 0} сек
                     </>
                   )}
 
@@ -173,8 +173,8 @@ export const ExerciseLogScreen: React.FC<ExerciseLogScreenProps> = ({
                   {activeExercise.type === 'EXERCISE_TYPE_CARDIO' && (
                     <>
                       {set.distance_m !== undefined ? `${set.distance_m} м` : ''}
-                      {set.distance_m !== undefined && set.duration_sec !== undefined ? ' за ' : ''}
-                      {set.duration_sec !== undefined ? `${set.duration_sec} сек` : ''}
+                      {set.distance_m !== undefined && set.duration_seconds !== undefined ? ' за ' : ''}
+                      {set.duration_seconds !== undefined ? `${set.duration_seconds} сек` : ''}
                     </>
                   )}
                 </strong>

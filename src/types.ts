@@ -87,7 +87,7 @@ export interface CompletedSet {
   set_number: number;
   weight?: number;
   reps?: number;
-  duration_sec?: number;
+  duration_seconds?: number;
   distance_m?: number;
 }
 
