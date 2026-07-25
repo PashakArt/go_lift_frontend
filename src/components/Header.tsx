@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { TenantBranding } from '../types';
 
 interface HeaderProps {
@@ -14,8 +14,9 @@ export const Header: React.FC<HeaderProps> = ({
   sessionId, 
   onFinishWorkout 
 }) => {
-  const { primary_color } = branding.theme;
+  const { primary_color, text_color } = branding.theme;
   const isDefaultTenant = tenantId === '00000000-0000-0000-0000-000000000000';
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
     <header style={{ marginBottom: '16px', width: '100%' }}>
@@ -39,19 +40,22 @@ export const Header: React.FC<HeaderProps> = ({
         {sessionId ? (
           <button
             onClick={onFinishWorkout}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
             style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              color: '#ef4444',
-              border: '1px solid #ef4444',
+              backgroundColor: isHovered ? 'rgba(239, 68, 68, 0.15)' : `${text_color}10`,
+              color: isHovered ? '#ef4444' : `${text_color}90`,
+              border: `1px solid ${isHovered ? '#ef4444' : `${text_color}20`}`,
               borderRadius: '8px',
               padding: '6px 12px',
               fontSize: '12px',
               fontWeight: 600,
               cursor: 'pointer',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              transition: 'all 0.2s ease'
             }}
           >
-            Завершить 🏁
+            Завершить <span style={{ filter: isHovered ? 'none' : 'grayscale(100%)' }}>🏁</span>
           </button>
         ) : (
           <div style={{ width: '0px' }} />

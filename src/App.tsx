@@ -24,12 +24,12 @@ const INITIAL_BRANDING: TenantBranding = {
   theme: {
     mode: "dark",
     text_color: "#FFFFFF",
-    accent_color: "#10b981",
-    primary_color: "#10b981",
+    accent_color: "#2AABEE",  
+    primary_color: "#2AABEE", 
     surface_color: "#1E1E1E",
-    background_color: "#121212"
+    background_color: "#121212",
   },
-  assets: { logo_url: "" }
+  assets: { logo_url: "https://go-lift.ru/logo.png" }
 };
 
 const MOCK_INIT_DATA = "query_id=AAH...&user=%7B%22id%22%3A12345678%2C%22first_name%22%3A%22LocalDev%22%2C%22username%22%3A%22devuser%22%7D";
