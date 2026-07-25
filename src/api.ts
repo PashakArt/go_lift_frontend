@@ -7,6 +7,7 @@ import type {
   LogSetResponse,
   StartTrainingResponse,
   TrainingDaysResponse,
+  WorkoutsForDayResponse,
 } from "./types";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
@@ -133,7 +134,9 @@ export async function getExercises(
   return response.json();
 }
 
-export async function logWorkoutSet(payload: LogSetRequest): Promise<LogSetResponse> {
+export async function logWorkoutSet(
+  payload: LogSetRequest,
+): Promise<LogSetResponse> {
   const response = await fetch(`${BASE_URL}/api/v1/workout/sets`, {
     method: "POST",
     headers: getHeaders(),
@@ -145,14 +148,14 @@ export async function logWorkoutSet(payload: LogSetRequest): Promise<LogSetRespo
     throw new Error(errorData.message || "Не удалось сохранить подход");
   }
 
-  return response.json()
+  return response.json();
 }
 
 export async function finishTraining(): Promise<void> {
   const response = await fetch(`${BASE_URL}/api/v1/finish`, {
-    method: 'POST',
+    method: "POST",
     headers: getHeaders(),
-  })
+  });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -160,7 +163,9 @@ export async function finishTraining(): Promise<void> {
   }
 }
 
-export async function getCompletedExercises(exerciseId: string): Promise<CompletedSet[]> {
+export async function getCompletedExercises(
+  exerciseId: string,
+): Promise<CompletedSet[]> {
   const response = await fetch(
     `${BASE_URL}/api/v1/exercises/${exerciseId}/completed`,
     {
@@ -171,10 +176,12 @@ export async function getCompletedExercises(exerciseId: string): Promise<Complet
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || "Не удалось получить выполненные упражнения");
+    throw new Error(
+      errorData.message || "Не удалось получить выполненные упражнения",
+    );
   }
 
-  return response.json()
+  return response.json();
 }
 
 export async function getTrainingDays(
@@ -198,6 +205,29 @@ export async function getTrainingDays(
     const errorData = await response.json().catch(() => ({}));
     throw new Error(
       errorData.message || "Не удалось получить тренировочные дни",
+    );
+  }
+
+  return response.json();
+}
+
+export async function getWorkoutsForDay(
+  date: string, // Формат "YYYY-MM-DD"
+): Promise<WorkoutsForDayResponse> {
+  const queryParams = new URLSearchParams({ date });
+
+  const response = await fetch(
+    `${BASE_URL}/api/v1/workouts/day?${queryParams.toString()}`,
+    {
+      method: "GET",
+      headers: getHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.message || "Не удалось получить тренировки за день",
     );
   }
 

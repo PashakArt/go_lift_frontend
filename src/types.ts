@@ -94,3 +94,16 @@ export interface CompletedSet {
 export interface TrainingDaysResponse {
   days: string[];
 }
+
+interface WorkoutSessionDayDetail {
+  session_id: string;
+  started_at: string;
+  ended_at?: string;
+  duration_seconds: number;
+  exercises: SelectedExercise[];
+}
+
+export interface WorkoutsForDayResponse {
+  date: string;
+  sessions: WorkoutSessionDayDetail[];
+}

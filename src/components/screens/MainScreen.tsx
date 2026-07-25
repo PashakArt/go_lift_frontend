@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import type { TenantBranding } from '../../types';
-import { getTrainingDays } from '../../api';
+import type { TenantBranding, WorkoutsForDayResponse } from '../../types';
+import { getTrainingDays, getWorkoutsForDay } from '../../api';
 
 interface MainScreenProps {
   userName?: string;
@@ -26,18 +26,21 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 }) => {
   const { text_color, surface_color, primary_color, accent_color } = branding.theme;
 
-  // Состояние текущей даты для календаря (по умолчанию сегодня)
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [trainingDays, setTrainingDays] = useState<Set<string>>(new Set());
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(false);
 
-  // Режим отображения: 'DAYS' | 'MONTHS' | 'YEARS'
+  // Состояния для выбранного дня и просмотра тренировки
+  const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
+  const [dayWorkouts, setDayWorkouts] = useState<WorkoutsForDayResponse | null>(null);
+  const [isLoadingDayDetails, setIsLoadingDayDetails] = useState(false);
+
   const [viewMode, setViewMode] = useState<CalendarView>('DAYS');
 
   const year = currentDate.getFullYear();
-  const month = currentDate.getMonth(); // 0 - 11
+  const month = currentDate.getMonth();
 
-  // Загружаем дни с тренировками при смене месяца/года (только когда смотрим дни)
+  // Загружаем дни с тренировками при смене месяца/года
   useEffect(() => {
     let isMounted = true;
 
@@ -64,7 +67,26 @@ export const MainScreen: React.FC<MainScreenProps> = ({
     };
   }, [year, month]);
 
-  // Навигация по стрелкам
+  // Загрузка детальных тренировок за конкретный выбранный день
+  const handleSelectDay = async (dateStr: string, hasWorkout: boolean) => {
+    setSelectedDateStr(dateStr);
+    if (!hasWorkout) {
+      setDayWorkouts(null);
+      return;
+    }
+
+    setIsLoadingDayDetails(true);
+    try {
+      const data = await getWorkoutsForDay(dateStr);
+      setDayWorkouts(data);
+    } catch (err) {
+      console.error("Ошибка при загрузке детальной тренировки:", err);
+      setDayWorkouts(null);
+    } finally {
+      setIsLoadingDayDetails(false);
+    }
+  };
+
   const handlePrev = () => {
     if (viewMode === 'DAYS') {
       setCurrentDate(new Date(year, month - 1, 1));
@@ -85,7 +107,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
     }
   };
 
-  // Переключение режима по клику на заголовок
   const handleTitleClick = () => {
     if (viewMode === 'DAYS') {
       setViewMode('MONTHS');
@@ -96,21 +117,18 @@ export const MainScreen: React.FC<MainScreenProps> = ({
     }
   };
 
-  // Выбор месяца
   const handleSelectMonth = (selectedMonthIndex: number) => {
     setCurrentDate(new Date(year, selectedMonthIndex, 1));
     setViewMode('DAYS');
   };
 
-  // Выбор года
   const handleSelectYear = (selectedYear: number) => {
     setCurrentDate(new Date(selectedYear, month, 1));
     setViewMode('MONTHS');
   };
 
-  // Вычисления для сетки дней
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7; // Пн = 0
+  const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7;
 
   const formatDayString = (dayNum: number) => {
     const m = (month + 1).toString().padStart(2, "0");
@@ -118,12 +136,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({
     return `${year}-${m}-${d}`;
   };
 
-  // Генерация списка лет (например, 10 лет назад и 2 года вперед)
   const currentRealYear = new Date().getFullYear();
   const yearsList = Array.from({ length: 12 }, (_, i) => currentRealYear - 9 + i);
 
   return (
-    <div style={{ textAlign: 'center', width: '100%' }}>
+    <div style={{ textAlign: 'center', width: '100%', paddingBottom: '30px' }}>
       {/* Приветствие */}
       <h2 style={{ fontSize: '22px', fontWeight: 600, color: text_color, margin: '0 0 20px 0' }}>
         Привет, {userName || 'Атлет'}! 👋
@@ -213,7 +230,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
             ‹
           </button>
           
-          {/* Интерактивный заголовок */}
           <button
             onClick={handleTitleClick}
             style={{
@@ -256,7 +272,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
           </button>
         </div>
 
-        {/* 1. РЕЖИМ ДНЕЙ (Основной вид) */}
+        {/* 1. РЕЖИМ ДНЕЙ */}
         {viewMode === 'DAYS' && (
           <>
             <div style={{ 
@@ -286,14 +302,16 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                   const dayNum = i + 1;
                   const dateStr = formatDayString(dayNum);
                   const hasWorkout = trainingDays.has(dateStr);
+                  const isSelected = selectedDateStr === dateStr;
 
                   return (
                     <div
                       key={dateStr}
+                      onClick={() => handleSelectDay(dateStr, hasWorkout)}
                       style={{
                         height: '32px',
                         borderRadius: '50%',
-                        backgroundColor: hasWorkout ? primary_color : 'transparent',
+                        backgroundColor: hasWorkout ? primary_color : (isSelected ? `${text_color}20` : 'transparent'),
                         color: hasWorkout ? '#ffffff' : text_color,
                         fontWeight: hasWorkout ? 700 : 400,
                         fontSize: '13px',
@@ -301,6 +319,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                         alignItems: 'center',
                         justifyContent: 'center',
                         boxShadow: hasWorkout ? `0 2px 8px ${primary_color}60` : 'none',
+                        border: isSelected && !hasWorkout ? `1px solid ${text_color}60` : 'none',
+                        cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
                     >
@@ -315,12 +335,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
         {/* 2. РЕЖИМ ВЫБОРА МЕСЯЦА */}
         {viewMode === 'MONTHS' && (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(3, 1fr)', 
-            gap: '8px', 
-            padding: '8px 0' 
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', padding: '8px 0' }}>
             {MONTH_NAMES.map((mName, idx) => {
               const isCurrent = idx === month;
               return (
@@ -348,12 +363,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
         {/* 3. РЕЖИМ ВЫБОРА ГОДА */}
         {viewMode === 'YEARS' && (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(3, 1fr)', 
-            gap: '8px', 
-            padding: '8px 0' 
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', padding: '8px 0' }}>
             {yearsList.map((yNum) => {
               const isCurrent = yNum === year;
               return (
@@ -379,6 +389,66 @@ export const MainScreen: React.FC<MainScreenProps> = ({
           </div>
         )}
       </div>
+
+      {/* Детальная информация по выбранной дате */}
+      {selectedDateStr && (
+        <div style={{ marginTop: '20px', textAlign: 'left' }}>
+          <h4 style={{ color: text_color, fontSize: '15px', margin: '0 0 10px 4px', opacity: 0.8 }}>
+            Тренировки за {selectedDateStr}:
+          </h4>
+
+          {isLoadingDayDetails ? (
+            <div style={{ color: `${text_color}60`, fontSize: '13px', padding: '12px', textAlign: 'center' }}>
+              Загрузка деталей...
+            </div>
+          ) : dayWorkouts && dayWorkouts.sessions.length > 0 ? (
+            dayWorkouts.sessions.map((sess, idx) => (
+              <div 
+                key={sess.session_id || idx}
+                style={{
+                  backgroundColor: surface_color,
+                  borderRadius: '14px',
+                  padding: '14px',
+                  marginBottom: '12px',
+                  border: `1px solid ${text_color}15`
+                }}
+              >
+                <div style={{ color: primary_color, fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>
+                  Сессия #{idx + 1} {sess.duration_seconds > 0 && `• ${Math.round(sess.duration_seconds / 60)} мин`}
+                </div>
+
+                {sess.exercises.map((ex) => (
+                  <div key={ex.exercise_id} style={{ marginBottom: '10px' }}>
+                    <div style={{ color: text_color, fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>
+                      {ex.name}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {ex.sets.map((set, sIdx) => (
+                        <span 
+                          key={set.set_id || sIdx}
+                          style={{
+                            backgroundColor: `${text_color}10`,
+                            color: text_color,
+                            fontSize: '12px',
+                            padding: '3px 8px',
+                            borderRadius: '6px'
+                          }}
+                        >
+                          #{set.set_number}: {set.weight ? `${set.weight}кг × ` : ''}{set.reps ? `${set.reps} повт` : ''}{set.duration_seconds ? `${set.duration_seconds} сек` : ''}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))
+          ) : (
+            <div style={{ color: `${text_color}60`, fontSize: '13px', padding: '12px', textAlign: 'center', backgroundColor: surface_color, borderRadius: '12px' }}>
+              В этот день тренировок не было 😴
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
