@@ -17,8 +17,18 @@ import { MainScreen } from './components/screens/MainScreen';
 import { SelectMuscleGroupScreen } from './components/screens/SelectMuscleGroupScreen';
 import { SelectExerciseScreen } from './components/screens/SelectExerciseScreen';
 import { ExerciseLogScreen } from './components/screens/ExerciseLogScreen';
+import { TemplateEditorScreen } from './components/screens/TemplateEditorScreen';
 
-type AppStep = 'LOADING' | 'WELCOME_NEW' | 'MAIN' | 'SELECT_MUSCLE_GROUP' | 'SELECT_EXERCISE' | 'EXERCISE_LOG';
+type AppStep = 
+  | 'LOADING' 
+  | 'WELCOME_NEW' 
+  | 'MAIN' 
+  | 'SELECT_MUSCLE_GROUP' 
+  | 'SELECT_EXERCISE' 
+  | 'EXERCISE_LOG' 
+  | 'CREATE_TEMPLATE'
+  | 'TEMPLATE_SELECT_MUSCLE_GROUP'
+  | 'TEMPLATE_SELECT_EXERCISE';
 
 const INITIAL_BRANDING: TenantBranding = {
   theme: {
@@ -35,6 +45,8 @@ const INITIAL_BRANDING: TenantBranding = {
 const MOCK_INIT_DATA = "query_id=AAH...&user=%7B%22id%22%3A12345678%2C%22first_name%22%3A%22LocalDev%22%2C%22username%22%3A%22devuser%22%7D";
 
 export default function App() {
+  const [templateTitle, setTemplateTitle] = useState('');
+  const [templateExercises, setTemplateExercises] = useState<GetExercisesResponse[]>([]);
   const [step, setStep] = useState<AppStep>('LOADING');
   const [tgUser, setTgUser] = useState<{ firstName: string; id: number } | null>(null);
   const [backendStatus, setBackendStatus] = useState<string>('Инициализация...');
@@ -61,6 +73,38 @@ export default function App() {
     window.Telegram?.WebApp?.initData
   );
 
+  const handleStartAddTemplateExercise = async () => {
+  try {
+    setStep('LOADING');
+    setBackendStatus('Загрузка групп мышц...');
+    const groups = await getMuscleGroups(initDataRawState);
+    setMuscleGroups(groups);
+    setStep('TEMPLATE_SELECT_MUSCLE_GROUP');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Ошибка';
+    alert(`Не удалось загрузить группы мышц: ${msg}`);
+    setStep('CREATE_TEMPLATE');
+  }
+};
+
+const handleTemplateSelectMuscleGroup = async (groupId: string) => {
+  try {
+    setStep('LOADING');
+    const list = await getExercises(groupId);
+    setExercises(list);
+    setStep('TEMPLATE_SELECT_EXERCISE');
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Ошибка';
+    alert(`Не удалось загрузить упражнения: ${msg}`);
+    setStep('TEMPLATE_SELECT_MUSCLE_GROUP');
+  }
+};
+
+const handleTemplateSelectExercise = (exercise: GetExercisesResponse) => {
+  setTemplateExercises((prev) => [...prev, exercise]);
+  setStep('CREATE_TEMPLATE');
+};
+
   const handleLoadMuscleGroups = async (rawInitData?: string) => {
     try {
       const groups = await getMuscleGroups(rawInitData || initDataRawState);
@@ -83,18 +127,16 @@ export default function App() {
       
       await finishTraining();
       
-      // Сбрасываем локальное состояние тренировки
       setSessionId(null);
       setWorkoutExercises([]);
       setActiveExercise(null);
       setSelectedMuscleGroup(null);
       
-      // Возвращаем пользователя на главный экран
       setStep('MAIN');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Ошибка';
       alert(`Не удалось завершить тренировку: ${msg}`);
-      setStep('EXERCISE_LOG'); // Возвращаем назад в случае ошибки
+      setStep('EXERCISE_LOG');
     }
   };
 
@@ -102,7 +144,6 @@ export default function App() {
     const auth = async () => {
       let rawData = '';
 
-      // 1. Пробуем аккуратно достать данные из Telegram SDK или Telegram WebApp
       if (isTelegramContext) {
         try {
           const launchParams = retrieveLaunchParams();
@@ -115,7 +156,7 @@ export default function App() {
             setTgUser({ firstName: sdkData.user.firstName, id: sdkData.user.id });
           }
         } catch {
-          // Игнорируем SDK ошибки, если запустились вне Telegram
+          // Игнорируем SDK ошибки
         }
 
         if (!rawData) {
@@ -128,14 +169,12 @@ export default function App() {
         }
       }
 
-      // 2. Если мы на Localhost и данные не появились — берем MOCK_INIT_DATA
       if (!rawData) {
         console.warn("⚠️ Telegram Context не найден. Используем MOCK_INIT_DATA для разработки");
         rawData = MOCK_INIT_DATA;
         setTgUser({ firstName: 'Локальный Атлет', id: 77777 });
       }
 
-      // 3. Авторизация на бэкенде
       try {
         setInitDataRawState(rawData);
         setBackendStatus('Авторизация на бэкенде...');
@@ -201,7 +240,6 @@ export default function App() {
     const isCardio = activeExercise.type === 'EXERCISE_TYPE_CARDIO';
     const isStatic = activeExercise.type === 'EXERCISE_TYPE_STATIC';
 
-    // Вытаскиваем нужные поля в зависимости от типа
     const weight = !isCardio && weightInput !== '' ? parseFloat(weightInput) : undefined;
     const reps = !isCardio && !isStatic && repsInput !== '' ? parseInt(repsInput, 10) : undefined;
     const duration_seconds = (isCardio || isStatic) && durationInput !== '' ? parseInt(durationInput, 10) : undefined;
@@ -261,7 +299,49 @@ export default function App() {
             userName={tgUser?.firstName} 
             sessionId={sessionId} 
             branding={branding} 
-            onStartWorkout={handleStartWorkout} 
+            onStartWorkout={handleStartWorkout}
+            onCreateTemplate={() => setStep('CREATE_TEMPLATE')}
+          />
+        )}
+
+        {step === 'CREATE_TEMPLATE' && (
+          <TemplateEditorScreen 
+            branding={branding}
+            title={templateTitle}
+            onTitleChange={setTemplateTitle}
+            selectedExercisesData={templateExercises}
+            onAddExerciseRequest={handleStartAddTemplateExercise}
+            onRemoveExercise={(index) => {
+              setTemplateExercises(prev => prev.filter((_, i) => i !== index));
+            }}
+            onBack={() => {
+              setTemplateExercises([]);
+              setTemplateTitle('');
+              setStep('MAIN');
+            }}
+            onSuccess={() => {
+              setTemplateExercises([]);
+              setStep('MAIN');
+            }}
+          />
+        )}
+
+        {/* ВЫБОР МЫШЦ ДЛЯ ШАБЛОНА */}
+        {step === 'TEMPLATE_SELECT_MUSCLE_GROUP' && (
+          <SelectMuscleGroupScreen 
+            muscleGroups={muscleGroups} 
+            branding={branding} 
+            onSelectGroup={handleTemplateSelectMuscleGroup} 
+          />
+        )}
+
+        {/* ВЫБОР УПРАЖНЕНИЯ ДЛЯ ШАБЛОНА */}
+        {step === 'TEMPLATE_SELECT_EXERCISE' && (
+          <SelectExerciseScreen 
+            exercises={exercises} 
+            branding={branding} 
+            onSelectExercise={handleTemplateSelectExercise} 
+            onBack={() => setStep('TEMPLATE_SELECT_MUSCLE_GROUP')} 
           />
         )}
 

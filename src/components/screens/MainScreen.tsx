@@ -7,6 +7,7 @@ interface MainScreenProps {
   sessionId: string | null;
   branding: TenantBranding;
   onStartWorkout: () => void;
+  onCreateTemplate?: () => void; // NEW: Колбэк для перехода в конструктор планов
 }
 
 const formatSetDetails = (set: SetEntry) => {
@@ -55,7 +56,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   userName, 
   sessionId, 
   branding, 
-  onStartWorkout 
+  onStartWorkout,
+  onCreateTemplate, // NEW: Получаем колбэк из пропсов
 }) => {
   const { text_color, surface_color, primary_color, accent_color } = branding.theme;
 
@@ -208,7 +210,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         </h3>
       </div>
 
-      {/* Главная кнопка */}
+      {/* Главная кнопка старта */}
       <button 
         onClick={onStartWorkout}
         style={{
@@ -224,11 +226,33 @@ export const MainScreen: React.FC<MainScreenProps> = ({
           cursor: 'pointer',
           boxShadow: `0 6px 20px ${primary_color}40`,
           transition: 'transform 0.1s active, background-color 0.3s',
-          marginBottom: '24px'
+          marginBottom: '12px'
         }}
       >
         {sessionId ? 'ПРОДОЛЖИТЬ ТРЕНИРОВКУ' : 'НАЧАТЬ ТРЕНИРОВКУ'}
       </button>
+
+      {/* NEW: Кнопка "Создать план тренировки" */}
+      {onCreateTemplate && (
+        <button 
+          onClick={onCreateTemplate}
+          style={{
+            backgroundColor: 'transparent', 
+            color: primary_color, 
+            border: `1px solid ${primary_color}`, 
+            padding: '12px 24px',
+            borderRadius: '14px', 
+            fontSize: '15px', 
+            fontWeight: 600, 
+            width: '100%', 
+            cursor: 'pointer',
+            marginBottom: '24px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          + Создать план тренировки
+        </button>
+      )}
 
       {/* Виджет Календаря Активности */}
       <div style={{
