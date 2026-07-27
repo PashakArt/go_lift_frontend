@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import type { CompletedSet, GetExercisesResponse, TenantBranding } from '../../types';
-import { getCompletedExercises } from '../../api';
+import type { CompletedSet, GetExercisesResponse, TenantBranding } from '../../types/types';
+import { getCompletedExercises } from '../../api/api';
 
 interface ExerciseLogScreenProps {
   activeExercise: GetExercisesResponse;

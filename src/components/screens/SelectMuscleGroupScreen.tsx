@@ -1,5 +1,5 @@
 import React from 'react';
-import type { GetMuscleGroupsResponse, TenantBranding } from '../../types';
+import type { GetMuscleGroupsResponse, TenantBranding } from '../../types/types';
 import { getMuscleImage } from '../../utils/assets';
 
 interface SelectMuscleGroupScreenProps {

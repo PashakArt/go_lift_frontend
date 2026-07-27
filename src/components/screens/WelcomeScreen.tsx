@@ -1,5 +1,5 @@
 import React from 'react';
-import type { TenantBranding } from '../../types';
+import type { TenantBranding } from '../../types/types';
 
 interface WelcomeScreenProps {
   branding: TenantBranding;

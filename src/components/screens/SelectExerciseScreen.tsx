@@ -1,5 +1,5 @@
 import React from 'react';
-import type { GetExercisesResponse, TenantBranding } from '../../types';
+import type { GetExercisesResponse, TenantBranding } from '../../types/types';
 import { getExerciseImage } from '../../utils/assets';
 
 interface SelectExerciseScreenProps {

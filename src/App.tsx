@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
-import { init, startTraining, getMuscleGroups, getExercises, getTenantIdFromUrl, logWorkoutSet, finishTraining } from './api';
+import { init, startTraining, getMuscleGroups, getExercises, getTenantIdFromUrl, logWorkoutSet, finishTraining } from './api/api';
 import type { 
   GetMuscleGroupsResponse, 
   GetExercisesResponse, 
@@ -8,7 +8,7 @@ import type {
   TenantBranding, 
   SelectedExercise,
   LogSetRequest
-} from './types';
+} from './types/types';
 
 import { Header } from './components/Header';
 import { LoadingScreen } from './components/screens/LoadingScreen';

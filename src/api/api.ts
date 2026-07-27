@@ -8,7 +8,7 @@ import type {
   StartTrainingResponse,
   TrainingDaysResponse,
   WorkoutsForDayResponse,
-} from "./types";
+} from "../types/types";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 

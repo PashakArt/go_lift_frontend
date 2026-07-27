@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import type { SetEntry, TenantBranding, WorkoutsForDayResponse } from '../../types';
-import { getTrainingDays, getWorkoutsForDay } from '../../api';
+import type { SetEntry, TenantBranding, WorkoutsForDayResponse } from '../../types/types';
+import { getTrainingDays, getWorkoutsForDay } from '../../api/api';
 
 interface MainScreenProps {
   userName?: string;

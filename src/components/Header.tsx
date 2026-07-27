@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { TenantBranding } from '../types';
+import type { TenantBranding } from '../types/types';
 
 interface HeaderProps {
   branding: TenantBranding;
