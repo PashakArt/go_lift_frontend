@@ -7,7 +7,7 @@ interface MainScreenProps {
   sessionId: string | null;
   branding: TenantBranding;
   onStartWorkout: () => void;
-  onCreateTemplate?: () => void; // NEW: Колбэк для перехода в конструктор планов
+  onOpenTemplates?: () => void;
 }
 
 const formatSetDetails = (set: SetEntry) => {
@@ -57,7 +57,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   sessionId, 
   branding, 
   onStartWorkout,
-  onCreateTemplate, // NEW: Получаем колбэк из пропсов
+  onOpenTemplates, // NEW: Получаем колбэк из пропсов
 }) => {
   const { text_color, surface_color, primary_color, accent_color } = branding.theme;
 
@@ -232,10 +232,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         {sessionId ? 'ПРОДОЛЖИТЬ ТРЕНИРОВКУ' : 'НАЧАТЬ ТРЕНИРОВКУ'}
       </button>
 
-      {/* NEW: Кнопка "Создать план тренировки" */}
-      {onCreateTemplate && (
+      {onOpenTemplates && (
         <button 
-          onClick={onCreateTemplate}
+          onClick={onOpenTemplates}
           style={{
             backgroundColor: 'transparent', 
             color: primary_color, 
@@ -250,7 +249,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
             transition: 'all 0.2s ease'
           }}
         >
-          + Создать план тренировки
+          Мои программы
         </button>
       )}
 
