@@ -33,6 +33,7 @@ export interface InitResponse {
   session_id: string;
   is_new_user: boolean;
   branding: TenantBranding;
+  template_id?: string;
 }
 
 export interface StartTrainingResponse {
@@ -106,4 +107,28 @@ interface WorkoutSessionDayDetail {
 export interface WorkoutsForDayResponse {
   date: string;
   sessions: WorkoutSessionDayDetail[];
+}
+
+export interface RunnerSet {
+  setNum: number;
+  targetWeight?: number;
+  targetReps?: number;
+  targetDurationSec?: number;
+  targetDistanceM?: number;
+
+  weight: string;
+  reps: string;
+  durationSec: string;
+  distanceM: string;
+
+  isCompleted: boolean;
+  setId?: string;
+  isSaving?: boolean;
+}
+
+export interface RunnerExercise {
+  exerciseId: string;
+  name: string;
+  type: string;
+  sets: RunnerSet[];
 }

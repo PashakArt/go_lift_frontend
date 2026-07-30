@@ -82,12 +82,15 @@ export async function init(initDataRaw: string): Promise<InitResponse> {
   return data;
 }
 
-export async function startTraining(): Promise<StartTrainingResponse> {
+export async function startTraining(
+  templateId?: string,
+): Promise<StartTrainingResponse> {
   const response = await fetch(`${BASE_URL}/api/v1/start`, {
     method: "POST",
     headers: getHeaders({
       "Content-Type": "application/json",
     }),
+    body: JSON.stringify(templateId ? { template_id: templateId } : {}),
   });
 
   if (!response.ok) {

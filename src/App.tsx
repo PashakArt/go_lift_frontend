@@ -17,6 +17,10 @@ import { TemplateEditorScreen } from './components/screens/templates/TemplateEdi
 import { TemplatesListScreen } from './components/screens/templates/TemplatesListScreen';
 import { TemplateDetailScreen } from './components/screens/templates/TemplateDetailScreen';
 
+// 1. ИМПОРТИРУЕМ НОВЫЕ КОМПОНЕНТЫ
+import { StartWorkoutModal } from './components/modals/StartWorkoutModal';
+import { WorkoutRunnerScreen } from './components/screens/WorkoutRunnerScreen';
+
 type AppStep = 
   | 'LOADING' 
   | 'WELCOME_NEW' 
@@ -26,6 +30,7 @@ type AppStep =
   | 'SELECT_MUSCLE_GROUP' 
   | 'SELECT_EXERCISE' 
   | 'EXERCISE_LOG' 
+  | 'WORKOUT_RUNNER' // 2. ДОБАВИЛИ НОВЫЙ ШАГ
   | 'CREATE_TEMPLATE'
   | 'TEMPLATE_SELECT_MUSCLE_GROUP'
   | 'TEMPLATE_SELECT_EXERCISE';
@@ -35,13 +40,15 @@ export default function App() {
   const [muscleGroups, setMuscleGroups] = useState<GetMuscleGroupsResponse[]>([]);
   const [exercises, setExercises] = useState<GetExercisesResponse[]>([]);
 
+  // 3. СОСТОЯНИЕ ДЛЯ МОДАЛКИ ВЫБОРА РЕЖИМА
+  const [isStartModalOpen, setIsStartModalOpen] = useState(false);
+
   const tenantId = getTenantIdFromUrl();
 
   const { initDataRaw, branding, backendStatus, initResponse, isLoading, setBackendStatus } = useTelegramAuth();
   const templateState = useTemplates();
   const workoutState = useWorkout();
 
-  // FIX Ошибки 2: Выполняем первичную загрузку прямо при смене isLoading
   useEffect(() => {
     if (isLoading) return;
 
@@ -50,6 +57,17 @@ export default function App() {
 
       if (initResponse.has_active_session && initResponse.session_id) {
         workoutState.setSessionId(initResponse.session_id);
+
+        if (initResponse.template_id) {
+          try {
+            await workoutState.startTemplateWorkout(initResponse.template_id);
+            setStep('WORKOUT_RUNNER');
+            return;
+          } catch (err) {
+            console.error('Не удалось восстановить тренировку по шаблону:', err);
+          }
+      }
+
         try {
           const groups = await getMuscleGroups(initDataRaw);
           setMuscleGroups(groups);
@@ -79,6 +97,18 @@ export default function App() {
     }
   };
 
+  // 4. ОТКРЫТИЕ МОДАЛКИ С ПРЕДВАРИТЕЛЬНОЙ ЗАГРУЗКОЙ ШАБЛОНОВ
+  const handleOpenStartOptions = async () => {
+    try {
+      // Загружаем актуальные шаблоны, чтобы показать их в модалке
+      await templateState.fetchTemplates();
+    } catch (err) {
+      console.error("Ошибка при подгрузке шаблонов:", err);
+    } finally {
+      setIsStartModalOpen(true);
+    }
+  };
+
   const handleOpenTemplatesList = async () => {
     try {
       setStep('LOADING');
@@ -101,12 +131,28 @@ export default function App() {
     }
   };
 
+  // 5. СТАРТ СВОБОДНОЙ ТРЕНИРОВКИ
   const handleStartFreeWorkout = async () => {
+    setIsStartModalOpen(false);
     try {
       setStep('LOADING');
       await workoutState.startWorkout();
       await loadMuscleGroups();
     } catch {
+      setStep('MAIN');
+    }
+  };
+
+  // 6. СТАРТ ТРЕНИРОВКИ ПО ШАБЛОНУ (Из модалки или напрямую из просмотра программы)
+  const handleStartTemplateWorkout = async (templateId: string) => {
+    setIsStartModalOpen(false);
+    try {
+      setStep('LOADING');
+      setBackendStatus('Запуск программы...');
+      await workoutState.startTemplateWorkout(templateId);
+      setStep('WORKOUT_RUNNER');
+    } catch (err) {
+      console.error("Не удалось запустить тренировку по шаблону:", err);
       setStep('MAIN');
     }
   };
@@ -171,8 +217,25 @@ export default function App() {
           <MainScreen
             branding={branding}
             sessionId={workoutState.sessionId}
-            onStartWorkout={handleStartFreeWorkout}
+            onStartWorkout={handleOpenStartOptions} // 7. ВЕШАЕМ ОТКРЫТИЕ МОДАЛКИ ВМЕСТО ПРЯМОГО СТАРТА
             onOpenTemplates={handleOpenTemplatesList}
+          />
+        )}
+
+        {/* 8. ЭКРАН ТРЕНИРОВКИ ПО ШАБЛОНУ */}
+        {step === 'WORKOUT_RUNNER' && workoutState.activeTemplate && (
+          <WorkoutRunnerScreen
+            branding={branding}
+            templateName={workoutState.activeTemplate.name}
+            exercises={workoutState.runnerExercises}
+            onToggleSet={workoutState.toggleRunnerSet}
+            onUpdateSet={workoutState.updateRunnerSetFields}
+            onFinishWorkout={async () => {
+              setStep('LOADING');
+              setBackendStatus('Завершение тренировки...');
+              await workoutState.finishCurrentWorkout();
+              setStep('MAIN');
+            }}
           />
         )}
 
@@ -290,6 +353,16 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* 9. МОДАЛЬНОЕ ОКНО ВЫБОРА РЕЖИМА ТРЕНИРОВКИ */}
+      <StartWorkoutModal
+        isOpen={isStartModalOpen}
+        branding={branding}
+        templates={templateState.templates}
+        onSelectFree={handleStartFreeWorkout}
+        onSelectTemplate={handleStartTemplateWorkout}
+        onClose={() => setIsStartModalOpen(false)}
+      />
     </div>
   );
 }
