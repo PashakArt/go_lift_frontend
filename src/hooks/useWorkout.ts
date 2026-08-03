@@ -3,6 +3,7 @@ import {
   startTraining,
   logWorkoutSet,
   finishTraining,
+  getSessionExercises,
 } from "../api/api";
 import type {
   GetExercisesResponse,
@@ -39,44 +40,65 @@ export function useWorkout() {
   const startTemplateWorkout = async (
     templateId: string,
   ) => {
-    const [res, templateData] = await Promise.all([
-      startTraining(templateId),
+    const res = await startTraining(templateId);
+
+    const [templateData, sessionExercises] = await Promise.all([
       getTemplateDetail(templateId),
+      getSessionExercises(res.session_id).catch(() => []),
     ]);
 
     setSessionId(res.session_id);
     setActiveTemplate(templateData);
 
+    const completedByExercise = buildCompletedSetsByExercise(sessionExercises);
+
     const mappedExercises: RunnerExercise[] = templateData.items.map(
-      (item) => ({
-        exerciseId: item.exercise_id,
-        name: item.name || "Упражнение",
-        type: item.type || "EXERCISE_TYPE_DYNAMIC",
-        sets: item.target_sets.map((ts) => ({
-          setNum: ts.set_num,
-          targetWeight: ts.weight,
-          targetReps: ts.reps,
-          targetDurationSec: ts.duration_seconds,
-          targetDistanceM: ts.distance_meters,
+      (item) => {
+        const completedSets = completedByExercise.get(item.exercise_id);
 
-          weight:
-            ts.weight !== undefined && ts.weight !== null
-              ? String(ts.weight)
-              : "",
-          reps:
-            ts.reps !== undefined && ts.reps !== null ? String(ts.reps) : "",
-          durationSec:
-            ts.duration_seconds !== undefined && ts.duration_seconds !== null
-              ? String(ts.duration_seconds)
-              : "",
-          distanceM:
-            ts.distance_meters !== undefined && ts.distance_meters !== null
-              ? String(ts.distance_meters)
-              : "",
+        return {
+          exerciseId: item.exercise_id,
+          name: item.name || "Упражнение",
+          type: item.type || "EXERCISE_TYPE_DYNAMIC",
+          sets: item.target_sets.map((ts) => {
+            const completed = completedSets?.get(ts.set_num);
 
-          isCompleted: false,
-        })),
-      }),
+            return {
+              setNum: ts.set_num,
+              targetWeight: ts.weight,
+              targetReps: ts.reps,
+              targetDurationSec: ts.duration_seconds,
+              targetDistanceM: ts.distance_meters,
+
+              weight: completed
+                ? completed.weight
+                : ts.weight !== undefined && ts.weight !== null
+                  ? String(ts.weight)
+                  : "",
+              reps: completed
+                ? completed.reps
+                : ts.reps !== undefined && ts.reps !== null
+                  ? String(ts.reps)
+                  : "",
+              durationSec: completed
+                ? completed.durationSec
+                : ts.duration_seconds !== undefined &&
+                    ts.duration_seconds !== null
+                  ? String(ts.duration_seconds)
+                  : "",
+              distanceM: completed
+                ? completed.distanceM
+                : ts.distance_meters !== undefined &&
+                    ts.distance_meters !== null
+                  ? String(ts.distance_meters)
+                  : "",
+
+              isCompleted: Boolean(completed),
+              setId: completed?.setId,
+            };
+          }),
+        };
+      },
     );
 
     setRunnerExercises(mappedExercises);
@@ -238,4 +260,20 @@ export function useWorkout() {
     saveSet,
     finishCurrentWorkout,
   };
+}
+
+function buildCompletedSetsByExercise(
+  sessionExercises: RunnerExercise[],
+): Map<string, Map<number, RunnerSet>> {
+  const result = new Map<string, Map<number, RunnerSet>>();
+
+  for (const ex of sessionExercises) {
+    const bySetNum = new Map<number, RunnerSet>();
+    for (const set of ex.sets) {
+      bySetNum.set(set.setNum, set);
+    }
+    result.set(ex.exerciseId, bySetNum);
+  }
+
+  return result;
 }

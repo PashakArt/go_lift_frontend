@@ -5,6 +5,7 @@ import type {
   InitResponse,
   LogSetRequest,
   LogSetResponse,
+  RunnerExercise,
   StartTrainingResponse,
   TrainingDaysResponse,
   WorkoutsForDayResponse,
@@ -185,6 +186,49 @@ export async function getCompletedExercises(
   }
 
   return response.json();
+}
+
+export async function getSessionExercises(
+  sessionId: string,
+): Promise<RunnerExercise[]> {
+  const response = await fetch(
+    `${BASE_URL}/api/v1/sessions/${sessionId}/exercises`,
+    {
+      method: "GET",
+      headers: getHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.message || "Не удалось получить выполненные упражнения сессии",
+    );
+  }
+
+  const raw: RawSessionExercise[] = await response.json();
+
+  return raw.map((ex) => ({
+    exerciseId: ex.exercise_id,
+    name: ex.name,
+    type: ex.type,
+    sets: ex.sets.map((s) => ({
+      setNum: s.set_number,
+      weight: s.weight != null ? String(s.weight) : "",
+      reps: s.reps != null ? String(s.reps) : "",
+      durationSec: s.duration_seconds != null ? String(s.duration_seconds) : "",
+      distanceM: s.distance_m != null ? String(s.distance_m) : "",
+      isCompleted: true,
+      setId: s.set_id,
+    })),
+  }));
+}
+
+interface RawSessionExercise {
+  exercise_id: string;
+  name: string;
+  type: string;
+  sets: CompletedSet[];
 }
 
 export async function getTrainingDays(

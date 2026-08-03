@@ -61,11 +61,14 @@ export interface SetEntry {
   distance_meters?: number;
 }
 
-export interface SelectedExercise {
-  exercise_id: string;
+export interface ExerciseBase<TSet> {
   name: string;
   type: string;
-  sets: SetEntry[];
+  sets: TSet[];
+}
+
+export interface SelectedExercise extends ExerciseBase<SetEntry> {
+  exercise_id: string;
 }
 
 export interface LogSetRequest {
@@ -126,9 +129,6 @@ export interface RunnerSet {
   isSaving?: boolean;
 }
 
-export interface RunnerExercise {
+export interface RunnerExercise extends ExerciseBase<RunnerSet> {
   exerciseId: string;
-  name: string;
-  type: string;
-  sets: RunnerSet[];
 }
