@@ -34,6 +34,8 @@ export interface InitResponse {
   is_new_user: boolean;
   branding: TenantBranding;
   template_id?: string;
+  tg_first_name?: string;
+  tg_username?: string;
 }
 
 export interface StartTrainingResponse {

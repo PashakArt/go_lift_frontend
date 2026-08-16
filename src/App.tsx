@@ -213,13 +213,14 @@ export default function App() {
         {step === 'LOADING' && <LoadingScreen status={backendStatus} branding={branding} />}
         {step === 'WELCOME_NEW' && <WelcomeScreen branding={branding} onStart={() => setStep('MAIN')} />}
 
-        {step === 'MAIN' && (
-          <MainScreen
-            branding={branding}
-            sessionId={workoutState.sessionId}
-            onStartWorkout={handleOpenStartOptions} // 7. ВЕШАЕМ ОТКРЫТИЕ МОДАЛКИ ВМЕСТО ПРЯМОГО СТАРТА
-            onOpenTemplates={handleOpenTemplatesList}
-          />
+       {step === 'MAIN' && (
+        <MainScreen
+          branding={branding}
+          userName={initResponse?.tg_first_name || initResponse?.tg_username}
+          sessionId={workoutState.sessionId}
+          onStartWorkout={handleOpenStartOptions}
+          onOpenTemplates={handleOpenTemplatesList}
+        />
         )}
 
         {/* 8. ЭКРАН ТРЕНИРОВКИ ПО ШАБЛОНУ */}
